@@ -50,6 +50,7 @@ import com.crawljax.core.CrawljaxRunner;
 import com.crawljax.core.configuration.BrowserConfiguration;
 import com.crawljax.core.configuration.CrawljaxConfiguration;
 import com.crawljax.core.configuration.CrawljaxConfiguration.CrawljaxConfigurationBuilder;
+import com.crawljax.core.configuration.InputSpecification;
 import com.crawljax.core.configuration.ProxyConfiguration;
 import com.crawljax.core.plugin.Plugins;
 import com.google.common.collect.ImmutableSortedSet;
@@ -64,6 +65,8 @@ public class SpiderThread implements Runnable {
 	private AjaxSpiderParam params = null;
 	private CrawljaxRunner crawljax;
 	private final boolean spiderInScope;
+	private final String fieldValues;
+	private final String clickElements;
 	private boolean running;
 	private final Session session;
 	private static final Logger logger = Logger.getLogger(SpiderThread.class);
@@ -82,10 +85,12 @@ public class SpiderThread implements Runnable {
 	 * @param extension
 	 * @param inScope
 	 */
-	SpiderThread(String url, ExtensionAjax extension, boolean inScope, AjaxSpiderParam params, SpiderListener spiderListener) throws URIException {
+	SpiderThread(String url, ExtensionAjax extension, boolean inScope, String fieldValues, String clickElements, AjaxSpiderParam params, SpiderListener spiderListener) throws URIException {
 		this.url = url;
 		this.params = params;
 		this.spiderInScope = inScope;
+		this.fieldValues = fieldValues;
+		this.clickElements = clickElements;
 		this.running = false;
 		spiderListeners = new ArrayList<>(2);
 		spiderListeners.add(spiderListener);
@@ -151,18 +156,16 @@ public class SpiderThread implements Runnable {
 				com.crawljax.browser.EmbeddedBrowser.BrowserType.FIREFOX,
 				params.getNumberOfBrowsers(),
 				new AjaxSpiderBrowserBuilder(params.getBrowserId())));
-
-		if (params.isClickDefaultElems()) {
-			configurationBuilder.crawlRules().clickDefaultElements();
-		} else {
-			for (String elem : params.getElemsNames()) {
-				configurationBuilder.crawlRules().click(elem);
-			}
-		}
-
+		
+		setClickElements(configurationBuilder);
+		
 		configurationBuilder.crawlRules().insertRandomDataInInputForms(params.isRandomInputs());
 		configurationBuilder.crawlRules().waitAfterEvent(params.getEventWait(),TimeUnit.MILLISECONDS);
 		configurationBuilder.crawlRules().waitAfterReloadUrl(params.getReloadWait(),TimeUnit.MILLISECONDS);
+		configurationBuilder.crawlRules().followExternalLinks(true);
+		configurationBuilder.crawlRules().crawlHiddenAnchors(true);
+		
+		configurationBuilder.crawlRules().setInputSpec(getInputSpecification());
 
 		if (params.getMaxCrawlStates() == 0) {
 			configurationBuilder.setUnlimitedStates();
@@ -175,6 +178,70 @@ public class SpiderThread implements Runnable {
 		configurationBuilder.crawlRules().clickOnce(params.isClickElemsOnce());
 				
 		return configurationBuilder.build();
+	}
+	
+	private void setClickElements(CrawljaxConfigurationBuilder configurationBuilder)
+	{
+		if (clickElements == null || clickElements.trim().length() == 0)
+		{
+			if (params.isClickDefaultElems()) 
+				configurationBuilder.crawlRules().clickDefaultElements();
+			else 
+			{
+				for (String elem : params.getElemsNames())
+					addClickElement(configurationBuilder, elem);
+			}
+		}
+		else
+		{
+			String[] elements = clickElements.split(",|;");
+			
+			for (String elem : elements)
+				addClickElement(configurationBuilder, elem);
+		}
+	}
+	
+	private void addClickElement(CrawljaxConfigurationBuilder configurationBuilder, String elem)
+	{
+		elem = elem.trim();
+		if (elem.length() == 0)
+			return;
+		
+		if ("INPUT".equalsIgnoreCase(elem))
+		{
+			configurationBuilder.crawlRules().click(elem).withAttribute("type", "submit");
+			configurationBuilder.crawlRules().click(elem).withAttribute("type", "button");
+		}
+		else
+		{
+			configurationBuilder.crawlRules().click(elem);
+		}
+	}
+	
+	private InputSpecification getInputSpecification()
+	{
+		InputSpecification is = new InputSpecification();
+		
+		if (fieldValues == null)
+			return is;
+		
+		String[] splits = fieldValues.split("&");
+		
+		for (String fieldValue : splits)
+		{
+			int index = fieldValue.indexOf("=");
+			
+			if (index == -1)
+				continue;
+			
+			String field = fieldValue.substring(0, index).trim();
+			String value = fieldValue.substring(index + 1).trim();
+			
+			is.field(field).setValue(value);
+		}
+		
+		return is;
+		
 	}
 	
 	/**

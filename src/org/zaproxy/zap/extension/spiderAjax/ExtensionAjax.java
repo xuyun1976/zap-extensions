@@ -280,11 +280,22 @@ public class ExtensionAjax extends ExtensionAdaptor {
 	}
 	
 	SpiderThread createSpiderThread(String url, boolean inScope, SpiderListener spiderListener) throws URIException {
-		return this.createSpiderThread(url, inScope, getAjaxSpiderParam(), spiderListener);
+		return this.createSpiderThread(url, inScope, null, null, getAjaxSpiderParam(), spiderListener);
+	}
+	
+	SpiderThread createSpiderThread(String url, boolean inScope, String fieldValues, String clickElements, SpiderListener spiderListener) throws URIException {
+		return this.createSpiderThread(url, inScope, fieldValues, clickElements, getAjaxSpiderParam(), spiderListener);
 	}
 	
 	SpiderThread createSpiderThread(String url, boolean inScope, AjaxSpiderParam params, SpiderListener spiderListener) throws URIException {
-		SpiderThread spiderThread = new SpiderThread(url, this, inScope, params, spiderListener);
+		SpiderThread spiderThread = new SpiderThread(url, this, inScope, null, null, params, spiderListener);
+		spiderThread.addSpiderListener(getSpiderListener());
+		
+		return spiderThread;
+	}
+	
+	SpiderThread createSpiderThread(String url, boolean inScope, String fieldValues, String clickElements, AjaxSpiderParam params, SpiderListener spiderListener) throws URIException {
+		SpiderThread spiderThread = new SpiderThread(url, this, inScope, fieldValues, clickElements, params, spiderListener);
 		spiderThread.addSpiderListener(getSpiderListener());
 		
 		return spiderThread;

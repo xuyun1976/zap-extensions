@@ -58,6 +58,8 @@ public class AjaxSpiderAPI extends ApiImplementor implements SpiderListener {
 
 	private static final String PARAM_URL = "url";
 	private static final String PARAM_IN_SCOPE = "inScope";
+	private static final String PARAM_FIELD_VALUES = "fieldValues";
+	private static final String PARAM_CLICK_ELEMENTS = "clickElements";
 	private static final String PARAM_START = "start";
 	private static final String PARAM_COUNT = "count";
 
@@ -80,7 +82,7 @@ public class AjaxSpiderAPI extends ApiImplementor implements SpiderListener {
 		this.extension = extension;
 		this.historyReferences = Collections.emptyList();
 
-		this.addApiAction(new ApiAction(ACTION_START_SCAN, new String[] { PARAM_URL }, new String[] { PARAM_IN_SCOPE }));
+		this.addApiAction(new ApiAction(ACTION_START_SCAN, new String[] { PARAM_URL }, new String[] { PARAM_IN_SCOPE, PARAM_FIELD_VALUES, PARAM_CLICK_ELEMENTS }));
 		this.addApiAction(new ApiAction(ACTION_STOP_SCAN));
 
 		this.addApiView(new ApiView(VIEW_STATUS));
@@ -105,7 +107,7 @@ public class AjaxSpiderAPI extends ApiImplementor implements SpiderListener {
 			}
 
 			try {
-				spiderThread = extension.createSpiderThread(url, getParam(params, PARAM_IN_SCOPE, false), this);
+				spiderThread = extension.createSpiderThread(url, getParam(params, PARAM_IN_SCOPE, false), getParam(params, PARAM_FIELD_VALUES, null), getParam(params, PARAM_CLICK_ELEMENTS, null), this);
 			} catch(URIException e) {
 				throw new ApiException(Type.ILLEGAL_PARAMETER, PARAM_URL);
 			}
